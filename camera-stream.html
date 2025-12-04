@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modeling for Polaroidize-it</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #f5f5f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Space Mono', monospace;
+      padding: 20px;
+      color: #1a1a1a;
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background: #fff;
+      border: 3px solid #1a1a1a;
+      padding: 40px 30px;
+      box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 20px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+
+    .step-indicator {
+      text-align: center;
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 30px;
+      letter-spacing: 1px;
+    }
+
+    .reassurance {
+      background: #f9f9f9;
+      border: 2px dashed #ccc;
+      padding: 15px;
+      margin-top: 15px;
+      font-size: 11px;
+      line-height: 1.6;
+      color: #666;
+      display: none;
+    }
+
+    .reassurance.visible {
+      display: block;
+    }
+
+    .reassurance strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 11px;
+      color: #1a1a1a;
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      margin: 0 auto 25px;
+      overflow: hidden;
+      background: #1a1a1a;
+      aspect-ratio: 4/3;
+      border: 3px solid #1a1a1a;
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 19px,
+          rgba(255, 255, 255, 0.1) 19px,
+          rgba(255, 255, 255, 0.1) 20px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 19px,
+          rgba(255, 255, 255, 0.1) 19px,
+          rgba(255, 255, 255, 0.1) 20px
+        );
+    }
+
+    #video {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    #mosaicCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      transform: scaleX(-1);
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+      filter: grayscale(100%) contrast(1.1);
+    }
+
+    .live-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 6px 12px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      display: none;
+    }
+
+    .live-badge.active {
+      display: block;
+    }
+
+    .cta-section {
+      text-align: center;
+    }
+
+    button {
+      width: 100%;
+      padding: 16px 32px;
+      border: 3px solid #1a1a1a;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-family: 'Space Mono', monospace;
+      background: #fff;
+      color: #1a1a1a;
+      margin-bottom: 0;
+    }
+
+    button:hover:not(:disabled) {
+      background: #1a1a1a;
+      color: #fff;
+    }
+
+    button:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      background: #f0f0f0;
+      color: #999;
+    }
+
+    /* Prominent start button */
+    #startBtn {
+      background: #1a1a1a;
+      color: #fff;
+      padding: 20px 32px;
+      font-size: 14px;
+      letter-spacing: 3px;
+      box-shadow: 0 4px 0 #000;
+    }
+
+    #startBtn:hover {
+      background: #000;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 #000;
+    }
+
+    #startBtn:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #000;
+    }
+
+    /* Subtle end button */
+    #stopBtn {
+      background: transparent;
+      border: 2px solid #ccc;
+      color: #999;
+      font-size: 10px;
+      padding: 10px 20px;
+      margin-top: 15px;
+      letter-spacing: 1px;
+    }
+
+    #stopBtn:hover {
+      background: #f5f5f5;
+      border-color: #999;
+      color: #666;
+    }
+
+    .final-step-label {
+      text-align: center;
+      font-size: 11px;
+      color: #10b981;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    .final-step-label.visible {
+      display: block;
+    }
+
+    .settings {
+      display: none;
+      margin-bottom: 20px;
+      padding: 20px;
+      background: #f9f9f9;
+      border: 2px solid #ddd;
+    }
+
+    .settings.visible {
+      display: block;
+    }
+
+    .setting-row {
+      margin-bottom: 15px;
+    }
+
+    .setting-row label {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+      color: #666;
+    }
+
+    .setting-row input,
+    .setting-row select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ddd;
+      background: #fff;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+    }
+
+    .status {
+      text-align: center;
+      font-size: 10px;
+      color: #666;
+      margin-top: 15px;
+      letter-spacing: 1px;
+    }
+
+    .status.success {
+      color: #10b981;
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 30px 20px;
+      }
+
+      h1 {
+        font-size: 16px;
+      }
+
+      button {
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Modeling for Polaroidize-it</h1>
+    <div class="step-indicator" id="stepIndicator">Step 1 of 2</div>
+
+    <div class="video-container">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="mosaicCanvas"></canvas>
+      <div class="live-badge" id="liveBadge">LIVE</div>
+    </div>
+
+    <div class="settings" id="settingsPanel">
+      <div class="setting-row">
+        <label>Server URL:</label>
+        <input type="text" id="serverUrl" value="wss://polaroidize-server-production.up.railway.app">
+      </div>
+      <div class="setting-row">
+        <label>Mosaic Detail:</label>
+        <select id="mosaicSize">
+          <option value="20" selected>High Privacy (matches grid)</option>
+          <option value="40">Medium Privacy (2x2 grid squares)</option>
+          <option value="60">Low Privacy (3x3 grid squares)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="cta-section">
+      <div class="final-step-label" id="finalStepLabel">✓ Ready to Go Live - Final Step</div>
+      <button id="connectBtn">Connect to Photographer</button>
+      <button id="startBtn" style="display: none;">Start Modeling Session</button>
+      <button id="stopBtn" style="display: none;">End Session</button>
+      <div class="status" id="statusText"></div>
+
+      <div class="reassurance" id="reassurance">
+        <strong>💡 Your Privacy is Protected</strong>
+        Your camera view is only shared with the photographer. You'll see an abstract, pixelated mirror - not your actual appearance.
+      </div>
+    </div>
+  </div>
+
+  <canvas id="hiddenCanvas" style="display: none;"></canvas>
+
+  <script>
+    const video = document.getElementById('video');
+    const mosaicCanvas = document.getElementById('mosaicCanvas');
+    const mosaicCtx = mosaicCanvas.getContext('2d');
+    const hiddenCanvas = document.getElementById('hiddenCanvas');
+    const hiddenCtx = hiddenCanvas.getContext('2d');
+
+    const connectBtn = document.getElementById('connectBtn');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const serverUrlInput = document.getElementById('serverUrl');
+    const mosaicSizeSelect = document.getElementById('mosaicSize');
+    const liveBadge = document.getElementById('liveBadge');
+    const statusText = document.getElementById('statusText');
+    const stepIndicator = document.getElementById('stepIndicator');
+    const reassurance = document.getElementById('reassurance');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const finalStepLabel = document.getElementById('finalStepLabel');
+
+    let ws = null;
+    let stream = null;
+    let mosaicAnimationId = null;
+    let streamInterval = null;
+    let currentStep = 1;
+
+    function updateStep(step, message) {
+      currentStep = step;
+      stepIndicator.textContent = `Step ${step} of 2`;
+      statusText.textContent = message || '';
+    }
+
+    // Step 1: Connect to server
+    connectBtn.addEventListener('click', () => {
+      settingsPanel.classList.add('visible');
+      const serverUrl = serverUrlInput.value.trim();
+
+      try {
+        ws = new WebSocket(serverUrl);
+
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ type: 'register', role: 'broadcaster' }));
+          connectBtn.style.display = 'none';
+          startBtn.style.display = 'block';
+          finalStepLabel.classList.add('visible');
+          reassurance.classList.add('visible');
+          settingsPanel.classList.remove('visible');
+          updateStep(2, '✓ Connected to photographer');
+        };
+
+        ws.onerror = () => {
+          statusText.textContent = '⚠ Connection failed. Check server URL.';
+          statusText.className = 'status';
+        };
+
+        ws.onclose = () => {
+          location.reload();
+        };
+      } catch (err) {
+        statusText.textContent = '⚠ Invalid server URL';
+      }
+    });
+
+    // Step 2: Start modeling (request camera + start streaming)
+    startBtn.addEventListener('click', async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+
+        video.srcObject = stream;
+
+        video.addEventListener('loadedmetadata', () => {
+          if (!mosaicAnimationId) renderMosaic();
+
+          // Start streaming immediately
+          const fps = 15;
+          streamInterval = setInterval(sendFrame, 1000 / fps);
+
+          liveBadge.classList.add('active');
+          startBtn.style.display = 'none';
+          stopBtn.style.display = 'block';
+          finalStepLabel.classList.remove('visible');
+          reassurance.classList.remove('visible');
+          updateStep(2, '✓ Live! Photographer can see you now');
+          statusText.className = 'status success';
+        }, { once: true });
+
+        video.addEventListener('playing', () => {
+          if (!mosaicAnimationId) renderMosaic();
+        }, { once: true });
+
+      } catch (err) {
+        statusText.textContent = '⚠ Camera access denied';
+        statusText.className = 'status';
+      }
+    });
+
+    // Stop streaming
+    stopBtn.addEventListener('click', () => {
+      if (streamInterval) clearInterval(streamInterval);
+      if (mosaicAnimationId) cancelAnimationFrame(mosaicAnimationId);
+      liveBadge.classList.remove('active');
+      stopBtn.style.display = 'none';
+      startBtn.style.display = 'block';
+      finalStepLabel.classList.add('visible');
+      updateStep(2, 'Session paused');
+      statusText.className = 'status';
+    });
+
+    // Mosaic rendering - matches 20px grid background
+    function renderMosaic() {
+      if (!video.paused && !video.ended && video.readyState >= 2) {
+        try {
+          const blockSize = parseInt(mosaicSizeSelect.value); // 20px to match grid
+          const containerWidth = mosaicCanvas.clientWidth;
+          const containerHeight = mosaicCanvas.clientHeight;
+
+          // Calculate how many blocks fit in the display area
+          const blocksWide = Math.ceil(containerWidth / blockSize);
+          const blocksHigh = Math.ceil(containerHeight / blockSize);
+
+          // Set canvas to block count (will be scaled up by CSS to match grid)
+          mosaicCanvas.width = blocksWide;
+          mosaicCanvas.height = blocksHigh;
+
+          mosaicCtx.imageSmoothingEnabled = false;
+          mosaicCtx.drawImage(video, 0, 0, blocksWide, blocksHigh);
+        } catch (err) {
+          console.error('Mosaic error:', err);
+        }
+      }
+      mosaicAnimationId = requestAnimationFrame(renderMosaic);
+    }
+
+    // Send frame to server
+    function sendFrame() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+      hiddenCanvas.width = video.videoWidth;
+      hiddenCanvas.height = video.videoHeight;
+      hiddenCtx.drawImage(video, 0, 0);
+
+      hiddenCanvas.toBlob((blob) => {
+        if (!blob) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result.split(',')[1];
+          ws.send(JSON.stringify({
+            type: 'frame',
+            data: base64,
+            timestamp: Date.now()
+          }));
+        };
+        reader.readAsDataURL(blob);
+      }, 'image/jpeg', 0.7);
+    }
+  </script>
+</body>
+</html>
