@@ -78,7 +78,6 @@
       margin: 0 auto 25px;
       overflow: hidden;
       background: #1a1a1a;
-      aspect-ratio: 4/3;
       border: 3px solid #1a1a1a;
       background-image:
         repeating-linear-gradient(
@@ -101,7 +100,7 @@
       position: absolute;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       opacity: 0;
       pointer-events: none;
       z-index: -1;
@@ -111,7 +110,7 @@
       width: 100%;
       height: 100%;
       display: block;
-      object-fit: cover;
+      object-fit: contain;
       transform: scaleX(-1);
       image-rendering: pixelated;
       image-rendering: -moz-crisp-edges;
@@ -435,24 +434,34 @@
       statusText.className = 'status';
     });
 
-    // Mosaic rendering - matches 20px grid background
+    // Mosaic rendering - maintains video aspect ratio
     function renderMosaic() {
       if (!video.paused && !video.ended && video.readyState >= 2) {
         try {
-          const blockSize = parseInt(mosaicSizeSelect.value); // 20px to match grid
-          const containerWidth = mosaicCanvas.clientWidth;
-          const containerHeight = mosaicCanvas.clientHeight;
+          const blockSize = parseInt(mosaicSizeSelect.value);
+          const videoWidth = video.videoWidth;
+          const videoHeight = video.videoHeight;
 
-          // Calculate how many blocks fit in the display area
-          const blocksWide = Math.ceil(containerWidth / blockSize);
-          const blocksHigh = Math.ceil(containerHeight / blockSize);
+          if (videoWidth && videoHeight) {
+            // Update container to match video aspect ratio
+            const videoContainer = document.querySelector('.video-container');
+            const aspectRatio = videoWidth / videoHeight;
+            videoContainer.style.aspectRatio = aspectRatio;
 
-          // Set canvas to block count (will be scaled up by CSS to match grid)
-          mosaicCanvas.width = blocksWide;
-          mosaicCanvas.height = blocksHigh;
+            const containerWidth = mosaicCanvas.clientWidth;
+            const containerHeight = mosaicCanvas.clientHeight;
 
-          mosaicCtx.imageSmoothingEnabled = false;
-          mosaicCtx.drawImage(video, 0, 0, blocksWide, blocksHigh);
+            // Calculate blocks based on actual video dimensions
+            const blocksWide = Math.ceil(containerWidth / blockSize);
+            const blocksHigh = Math.ceil(containerHeight / blockSize);
+
+            // Set canvas to block count (will be scaled up by CSS)
+            mosaicCanvas.width = blocksWide;
+            mosaicCanvas.height = blocksHigh;
+
+            mosaicCtx.imageSmoothingEnabled = false;
+            mosaicCtx.drawImage(video, 0, 0, blocksWide, blocksHigh);
+          }
         } catch (err) {
           console.error('Mosaic error:', err);
         }
