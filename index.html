@@ -286,7 +286,7 @@
 <body>
   <div class="container">
     <h1>Modeling for Polaroidize-it</h1>
-    <div class="step-indicator" id="stepIndicator">Step 1 of 3</div>
+    <div class="step-indicator" id="stepIndicator">Step 1 of 2</div>
 
     <div class="video-container">
       <video id="video" autoplay playsinline muted></video>
@@ -297,7 +297,7 @@
     <div class="settings" id="settingsPanel">
       <div class="setting-row">
         <label>Server URL:</label>
-        <input type="text" id="serverUrl" value="ws://localhost:3000">
+        <input type="text" id="serverUrl" value="wss://polaroidize-server-production.up.railway.app">
       </div>
       <div class="setting-row">
         <label>Mosaic Detail:</label>
@@ -312,7 +312,6 @@
     <div class="cta-section">
       <div class="final-step-label" id="finalStepLabel">✓ Ready to Go Live - Final Step</div>
       <button id="connectBtn">Connect to Photographer</button>
-      <button id="cameraBtn" style="display: none;">Allow Camera Access</button>
       <button id="startBtn" style="display: none;">Start Modeling Session</button>
       <button id="stopBtn" style="display: none;">End Session</button>
       <div class="status" id="statusText"></div>
@@ -334,7 +333,6 @@
     const hiddenCtx = hiddenCanvas.getContext('2d');
 
     const connectBtn = document.getElementById('connectBtn');
-    const cameraBtn = document.getElementById('cameraBtn');
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     const serverUrlInput = document.getElementById('serverUrl');
@@ -354,7 +352,7 @@
 
     function updateStep(step, message) {
       currentStep = step;
-      stepIndicator.textContent = `Step ${step} of 3`;
+      stepIndicator.textContent = `Step ${step} of 2`;
       statusText.textContent = message || '';
     }
 
@@ -369,7 +367,8 @@
         ws.onopen = () => {
           ws.send(JSON.stringify({ type: 'register', role: 'broadcaster' }));
           connectBtn.style.display = 'none';
-          cameraBtn.style.display = 'block';
+          startBtn.style.display = 'block';
+          finalStepLabel.classList.add('visible');
           reassurance.classList.add('visible');
           settingsPanel.classList.remove('visible');
           updateStep(2, '✓ Connected to photographer');
@@ -388,8 +387,8 @@
       }
     });
 
-    // Step 2: Allow camera
-    cameraBtn.addEventListener('click', async () => {
+    // Step 2: Start modeling (request camera + start streaming)
+    startBtn.addEventListener('click', async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -400,10 +399,18 @@
 
         video.addEventListener('loadedmetadata', () => {
           if (!mosaicAnimationId) renderMosaic();
-          cameraBtn.style.display = 'none';
-          startBtn.style.display = 'block';
-          finalStepLabel.classList.add('visible');
-          updateStep(3, '✓ Camera ready');
+
+          // Start streaming immediately
+          const fps = 15;
+          streamInterval = setInterval(sendFrame, 1000 / fps);
+
+          liveBadge.classList.add('active');
+          startBtn.style.display = 'none';
+          stopBtn.style.display = 'block';
+          finalStepLabel.classList.remove('visible');
+          reassurance.classList.remove('visible');
+          updateStep(2, '✓ Live! Photographer can see you now');
+          statusText.className = 'status success';
         }, { once: true });
 
         video.addEventListener('playing', () => {
@@ -416,20 +423,6 @@
       }
     });
 
-    // Step 3: Start streaming
-    startBtn.addEventListener('click', () => {
-      const fps = 15;
-      streamInterval = setInterval(sendFrame, 1000 / fps);
-
-      liveBadge.classList.add('active');
-      startBtn.style.display = 'none';
-      stopBtn.style.display = 'block';
-      finalStepLabel.classList.remove('visible');
-      reassurance.classList.remove('visible');
-      updateStep(3, '✓ Live! Photographer can see you now');
-      statusText.className = 'status success';
-    });
-
     // Stop streaming
     stopBtn.addEventListener('click', () => {
       if (streamInterval) clearInterval(streamInterval);
@@ -438,7 +431,7 @@
       stopBtn.style.display = 'none';
       startBtn.style.display = 'block';
       finalStepLabel.classList.add('visible');
-      updateStep(3, 'Session paused');
+      updateStep(2, 'Session paused');
       statusText.className = 'status';
     });
 
