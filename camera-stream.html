@@ -309,10 +309,53 @@
       }
     }
 
+    .polaroid-item-image-wrapper {
+      position: relative;
+      width: 100%;
+      margin-bottom: 15px;
+      overflow: hidden;
+    }
+
     .polaroid-item img {
       width: 100%;
       display: block;
-      margin-bottom: 15px;
+    }
+
+    .polaroid-developing {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(180deg,
+        #8fa9b3 0%,
+        #a3b8bf 50%,
+        #8fa9b3 100%
+      );
+      animation: develop 8s ease-in-out forwards;
+      pointer-events: none;
+    }
+
+    @keyframes develop {
+      0% {
+        opacity: 1;
+        background: linear-gradient(180deg, #8fa9b3 0%, #a3b8bf 50%, #8fa9b3 100%);
+      }
+      25% {
+        opacity: 0.95;
+        background: linear-gradient(180deg, #7a95a0 0%, #8fa9b3 50%, #7a95a0 100%);
+      }
+      50% {
+        opacity: 0.85;
+        background: linear-gradient(180deg, #657f8c 0%, #7a95a0 50%, #657f8c 100%);
+      }
+      75% {
+        opacity: 0.5;
+        background: linear-gradient(180deg, rgba(101,127,140,0.6) 0%, rgba(122,149,160,0.4) 50%, rgba(101,127,140,0.6) 100%);
+      }
+      100% {
+        opacity: 0;
+      }
     }
 
     .polaroid-item-actions {
@@ -361,7 +404,7 @@
       font-family: 'Space Mono', monospace;
       font-size: 11px;
       letter-spacing: 0.5px;
-      z-index: 2000;
+      z-index: 10000;
       display: none;
       flex-direction: column;
       gap: 10px;
@@ -676,10 +719,21 @@
       const polaroidItem = document.createElement('div');
       polaroidItem.className = 'polaroid-item';
 
+      // Create image wrapper with developing animation
+      const imageWrapper = document.createElement('div');
+      imageWrapper.className = 'polaroid-item-image-wrapper';
+
       const img = document.createElement('img');
       img.src = imageUrl;
       img.alt = 'Polaroid';
       img.crossOrigin = 'anonymous';
+
+      // Create developing overlay
+      const developing = document.createElement('div');
+      developing.className = 'polaroid-developing';
+
+      imageWrapper.appendChild(img);
+      imageWrapper.appendChild(developing);
 
       const actions = document.createElement('div');
       actions.className = 'polaroid-item-actions';
@@ -690,7 +744,7 @@
       downloadBtn.addEventListener('click', () => downloadPolaroidWithBorder(imageUrl));
 
       actions.appendChild(downloadBtn);
-      polaroidItem.appendChild(img);
+      polaroidItem.appendChild(imageWrapper);
       polaroidItem.appendChild(actions);
 
       // Add to top of container
