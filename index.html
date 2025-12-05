@@ -267,59 +267,62 @@
       color: #10b981;
     }
 
-    /* Polaroid notification */
-    .polaroid-notification {
-      position: fixed;
-      top: 20px;
-      right: 20px;
+    /* Polaroid gallery */
+    .polaroid-gallery {
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 2px solid #ddd;
+      display: none;
+    }
+
+    .polaroid-gallery.visible {
+      display: block;
+    }
+
+    .polaroid-gallery-header {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+      text-align: center;
+      color: #1a1a1a;
+    }
+
+    .polaroid-item {
       background: #fff;
       border: 3px solid #1a1a1a;
       padding: 15px;
       box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.1);
-      max-width: 250px;
-      z-index: 1000;
-      animation: slideIn 0.3s ease-out;
-      display: none;
+      margin-bottom: 20px;
+      animation: polaroidDrop 0.5s ease-out;
     }
 
-    .polaroid-notification.show {
-      display: block;
-    }
-
-    @keyframes slideIn {
+    @keyframes polaroidDrop {
       from {
-        transform: translateX(100%);
         opacity: 0;
+        transform: translateY(-20px);
       }
       to {
-        transform: translateX(0);
         opacity: 1;
+        transform: translateY(0);
       }
     }
 
-    .polaroid-notification-header {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-
-    .polaroid-notification img {
+    .polaroid-item img {
       width: 100%;
       display: block;
-      margin-bottom: 10px;
+      margin-bottom: 15px;
     }
 
-    .polaroid-notification-actions {
+    .polaroid-item-actions {
       display: flex;
       gap: 8px;
     }
 
-    .polaroid-notification-btn {
+    .polaroid-item-btn {
       flex: 1;
-      padding: 8px;
+      padding: 10px;
       border: 2px solid #1a1a1a;
       background: #fff;
       font-family: 'Space Mono', monospace;
@@ -328,19 +331,20 @@
       cursor: pointer;
       text-transform: uppercase;
       letter-spacing: 1px;
+      transition: all 0.15s ease;
     }
 
-    .polaroid-notification-btn:hover {
+    .polaroid-item-btn:hover {
       background: #1a1a1a;
       color: #fff;
     }
 
-    .polaroid-notification-btn.download {
+    .polaroid-item-btn.download {
       background: #1a1a1a;
       color: #fff;
     }
 
-    .polaroid-notification-btn.download:hover {
+    .polaroid-item-btn.download:hover {
       background: #000;
     }
 
@@ -357,12 +361,6 @@
         font-size: 11px;
       }
 
-      .polaroid-notification {
-        top: 10px;
-        right: 10px;
-        left: 10px;
-        max-width: none;
-      }
     }
 
     /* Flash effect for when photographer takes photo */
@@ -405,16 +403,6 @@
   <!-- Flash Effect -->
   <div class="screen-flash" id="screenFlash"></div>
 
-  <!-- Polaroid Notification -->
-  <div class="polaroid-notification" id="polaroidNotification">
-    <div class="polaroid-notification-header">📸 New Polaroid!</div>
-    <img id="polaroidImage" src="" alt="Polaroid" crossorigin="anonymous">
-    <div class="polaroid-notification-actions">
-      <button class="polaroid-notification-btn download" id="downloadPolaroidBtn">Download</button>
-      <button class="polaroid-notification-btn" id="closePolaroidBtn">Close</button>
-    </div>
-  </div>
-
   <div class="container">
     <h1>Modeling for Polaroidize-it</h1>
     <div class="step-indicator" id="stepIndicator">Step 1 of 2</div>
@@ -452,6 +440,12 @@
         Your camera view is only shared with the photographer. You'll see an abstract, pixelated mirror - not your actual appearance.
       </div>
     </div>
+
+    <!-- Polaroid Gallery -->
+    <div class="polaroid-gallery" id="polaroidGallery">
+      <div class="polaroid-gallery-header">📸 Your Polaroids</div>
+      <div id="polaroidContainer"></div>
+    </div>
   </div>
 
   <canvas id="hiddenCanvas" style="display: none;"></canvas>
@@ -474,10 +468,8 @@
     const reassurance = document.getElementById('reassurance');
     const settingsPanel = document.getElementById('settingsPanel');
     const finalStepLabel = document.getElementById('finalStepLabel');
-    const polaroidNotification = document.getElementById('polaroidNotification');
-    const polaroidImage = document.getElementById('polaroidImage');
-    const closePolaroidBtn = document.getElementById('closePolaroidBtn');
-    const downloadPolaroidBtn = document.getElementById('downloadPolaroidBtn');
+    const polaroidGallery = document.getElementById('polaroidGallery');
+    const polaroidContainer = document.getElementById('polaroidContainer');
     const screenFlash = document.getElementById('screenFlash');
 
     let ws = null;
@@ -519,8 +511,8 @@
           try {
             const message = JSON.parse(event.data);
             if (message.type === 'polaroid') {
-              // Show polaroid notification
-              showPolaroid(message.imageUrl);
+              // Add polaroid to gallery
+              addPolaroidToGallery(message.imageUrl);
             } else if (message.type === 'shutter') {
               // Trigger flash effect when photographer takes photo
               screenFlash.classList.add('active');
@@ -541,25 +533,38 @@
       }
     });
 
-    // Polaroid notification handlers
-    function showPolaroid(imageUrl) {
-      polaroidImage.src = imageUrl;
-      polaroidNotification.classList.add('show');
+    // Add polaroid to persistent gallery
+    function addPolaroidToGallery(imageUrl) {
+      // Show gallery if hidden
+      polaroidGallery.classList.add('visible');
 
-      // Auto-hide after 10 seconds
-      setTimeout(() => {
-        polaroidNotification.classList.remove('show');
-      }, 10000);
+      // Create polaroid item
+      const polaroidItem = document.createElement('div');
+      polaroidItem.className = 'polaroid-item';
+
+      const img = document.createElement('img');
+      img.src = imageUrl;
+      img.alt = 'Polaroid';
+      img.crossOrigin = 'anonymous';
+
+      const actions = document.createElement('div');
+      actions.className = 'polaroid-item-actions';
+
+      const downloadBtn = document.createElement('button');
+      downloadBtn.className = 'polaroid-item-btn download';
+      downloadBtn.textContent = 'Download';
+      downloadBtn.addEventListener('click', () => downloadPolaroidWithBorder(imageUrl));
+
+      actions.appendChild(downloadBtn);
+      polaroidItem.appendChild(img);
+      polaroidItem.appendChild(actions);
+
+      // Add to top of container
+      polaroidContainer.insertBefore(polaroidItem, polaroidContainer.firstChild);
     }
 
-    closePolaroidBtn.addEventListener('click', () => {
-      polaroidNotification.classList.remove('show');
-    });
-
-    downloadPolaroidBtn.addEventListener('click', async () => {
-      const imageUrl = polaroidImage.src;
-      if (!imageUrl) return;
-
+    // Download polaroid with white border
+    async function downloadPolaroidWithBorder(imageUrl) {
       try {
         // Create canvas to render polaroid with white border
         const canvas = document.createElement('canvas');
@@ -635,7 +640,7 @@
       } catch (err) {
         console.error('Download failed:', err);
       }
-    });
+    }
 
     // Step 2: Start modeling (request camera + start streaming)
     startBtn.addEventListener('click', async () => {
