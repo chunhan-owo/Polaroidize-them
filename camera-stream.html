@@ -348,6 +348,90 @@
       background: #000;
     }
 
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 15px 20px;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      z-index: 2000;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 280px;
+      animation: toastSlideIn 0.3s ease-out;
+    }
+
+    .toast.show {
+      display: flex;
+    }
+
+    @keyframes toastSlideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .toast-message {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .toast-btn {
+      padding: 6px 12px;
+      border: 2px solid #fff;
+      background: transparent;
+      color: #fff;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.15s ease;
+    }
+
+    .toast-btn:hover {
+      background: #fff;
+      color: #1a1a1a;
+    }
+
+    .toast-btn.primary {
+      background: #fff;
+      color: #1a1a1a;
+    }
+
+    .toast-btn.primary:hover {
+      background: #f0f0f0;
+    }
+
+    @media (max-width: 640px) {
+      .toast {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+      }
+    }
+
     @media (max-width: 640px) {
       .container {
         padding: 30px 20px;
@@ -402,6 +486,12 @@
 <body>
   <!-- Flash Effect -->
   <div class="screen-flash" id="screenFlash"></div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast">
+    <div class="toast-message" id="toastMessage"></div>
+    <div class="toast-actions" id="toastActions"></div>
+  </div>
 
   <div class="container">
     <h1>Modeling for Polaroidize-it</h1>
@@ -471,8 +561,12 @@
     const polaroidGallery = document.getElementById('polaroidGallery');
     const polaroidContainer = document.getElementById('polaroidContainer');
     const screenFlash = document.getElementById('screenFlash');
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toastMessage');
+    const toastActions = document.getElementById('toastActions');
 
     let ws = null;
+    let toastTimeout = null;
     let stream = null;
     let mosaicAnimationId = null;
     let streamInterval = null;
@@ -533,6 +627,46 @@
       }
     });
 
+    // Toast notification system
+    function showToast(message, actions = [], duration = 5000) {
+      // Clear existing timeout
+      if (toastTimeout) {
+        clearTimeout(toastTimeout);
+      }
+
+      // Set message
+      toastMessage.textContent = message;
+
+      // Clear and set actions
+      toastActions.innerHTML = '';
+      actions.forEach(action => {
+        const btn = document.createElement('button');
+        btn.className = 'toast-btn' + (action.primary ? ' primary' : '');
+        btn.textContent = action.text;
+        btn.addEventListener('click', () => {
+          action.onClick();
+          hideToast();
+        });
+        toastActions.appendChild(btn);
+      });
+
+      // Show toast
+      toast.classList.add('show');
+
+      // Auto-hide after duration
+      if (duration > 0) {
+        toastTimeout = setTimeout(hideToast, duration);
+      }
+    }
+
+    function hideToast() {
+      toast.classList.remove('show');
+      if (toastTimeout) {
+        clearTimeout(toastTimeout);
+        toastTimeout = null;
+      }
+    }
+
     // Add polaroid to persistent gallery
     function addPolaroidToGallery(imageUrl) {
       // Show gallery if hidden
@@ -561,6 +695,17 @@
 
       // Add to top of container
       polaroidContainer.insertBefore(polaroidItem, polaroidContainer.firstChild);
+
+      // Show toast notification
+      showToast('📸 New Polaroid ready!', [
+        {
+          text: 'View Gallery',
+          primary: true,
+          onClick: () => {
+            polaroidGallery.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      ], 6000);
     }
 
     // Download polaroid with white border
@@ -637,8 +782,12 @@
             document.body.removeChild(a);
           }
         }
+
+        // Show success toast
+        showToast('✓ Successfully saved', [], 3000);
       } catch (err) {
         console.error('Download failed:', err);
+        showToast('✗ Save failed. Please try again.', [], 3000);
       }
     }
 
